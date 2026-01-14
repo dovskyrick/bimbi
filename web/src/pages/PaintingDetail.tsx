@@ -1,14 +1,14 @@
 import { useParams, Link } from 'react-router-dom';
-import { usePainting } from '../hooks/usePainting';
+import { usePainting } from '../hooks/usePaintings';
 import './PaintingDetail.css';
 
 export function PaintingDetail() {
   const { id } = useParams<{ id: string }>();
-  const { painting, loading, error } = usePainting(id!);
+  const { painting, loading, error } = usePainting(id);
 
   if (loading) {
     return (
-      <div className="detail-container">
+      <div className="container">
         <div className="loading">Loading...</div>
       </div>
     );
@@ -16,59 +16,72 @@ export function PaintingDetail() {
 
   if (error || !painting) {
     return (
-      <div className="detail-container">
+      <div className="container">
         <div className="error">{error || 'Painting not found'}</div>
-        <Link to="/" className="back-link">← Back to gallery</Link>
+        <Link to="/" className="back-link">← Back to Gallery</Link>
       </div>
     );
   }
 
-  const isAvailable = painting.status === 'available';
-
   return (
-    <div className="detail-container">
-      <Link to="/" className="back-link">← Back to gallery</Link>
+    <div className="container">
+      <Link to="/" className="back-link">← Back to Gallery</Link>
       
-      <div className="detail-content">
-        <div className="detail-image-section">
-          <div className="detail-image-container">
-            <img 
-              src={painting.imageUrl} 
-              alt={painting.title}
-              className="detail-image"
-            />
-            {!isAvailable && (
-              <div className="sold-overlay">
-                <span className="sold-badge">Sold</span>
-              </div>
-            )}
-          </div>
+      <div className="painting-detail">
+        <div className="painting-detail-image">
+          <img src={painting.imageUrl} alt={painting.title} />
+          {!painting.available && (
+            <div className="sold-overlay">
+              <span className="sold-text">Sold</span>
+            </div>
+          )}
         </div>
 
-        <div className="detail-info-section">
-          <h1 className="detail-title">{painting.title}</h1>
+        <div className="painting-detail-info">
+          <h1>{painting.title}</h1>
           
-          <div className="detail-metadata">
-            <p><strong>Medium:</strong> {painting.medium}</p>
-            <p><strong>Dimensions:</strong> {painting.width} × {painting.height} cm</p>
-            <p><strong>Year:</strong> {painting.year}</p>
-            <p className="detail-price">€{painting.price}</p>
+          <div className="detail-section">
+            <p className="price">€{painting.price.toLocaleString('pt-PT')}</p>
+            {painting.available && (
+              <p className="availability">Available</p>
+            )}
           </div>
 
-          <div className="detail-description">
-            <p>{painting.description}</p>
+          <div className="detail-section">
+            <h2>Details</h2>
+            <dl className="details-list">
+              <dt>Medium</dt>
+              <dd>{painting.medium}</dd>
+              
+              <dt>Dimensions</dt>
+              <dd>{painting.width} × {painting.height} cm</dd>
+              
+              <dt>Year</dt>
+              <dd>{painting.year}</dd>
+            </dl>
           </div>
 
-          {isAvailable ? (
-            <div className="detail-actions">
-              <p className="coming-soon">
-                Shopping cart coming soon! <br />
-                For now, please contact us to purchase.
-              </p>
+          <div className="detail-section">
+            <h2>Description</h2>
+            <p className="description">{painting.description}</p>
+          </div>
+
+          {painting.tags && painting.tags.length > 0 && (
+            <div className="detail-section">
+              <div className="tags">
+                {painting.tags.map(tag => (
+                  <span key={tag} className="tag">{tag}</span>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="detail-actions">
-              <p className="sold-message">This painting has been sold.</p>
+          )}
+
+          {painting.available && (
+            <div className="detail-section">
+              <p className="contact-note">
+                Interested in this piece? Contact us to purchase.
+              </p>
+              {/* Cart button will be added in Phase 2 */}
             </div>
           )}
         </div>
@@ -76,4 +89,3 @@ export function PaintingDetail() {
     </div>
   );
 }
-

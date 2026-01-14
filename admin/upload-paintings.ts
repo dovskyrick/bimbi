@@ -1,197 +1,202 @@
-#!/usr/bin/env tsx
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, ServiceAccount } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import sharp from 'sharp';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Initialize Firebase Admin SDK
+const serviceAccount = JSON.parse(
+  await fs.readFile('./service-account.json', 'utf-8')
+) as ServiceAccount;
 
-// Initialize Firebase Admin
-const serviceAccountPath = path.join(__dirname, 'service-account.json');
+// Get storage bucket from service account
+const storageBucket = `${serviceAccount.project_id}.appspot.com`;
 
-try {
-  const serviceAccount = JSON.parse(await fs.readFile(serviceAccountPath, 'utf8'));
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: serviceAccount.project_id + '.appspot.com'
-  });
-  console.log('✅ Firebase Admin initialized');
-} catch (error) {
-  console.error('❌ Error: service-account.json not found.');
-  console.error('Please download your Firebase service account key and save it as admin/service-account.json');
-  process.exit(1);
-}
+initializeApp({
+  credential: cert(serviceAccount),
+  storageBucket,
+});
 
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const db = getFirestore();
+const storage = getStorage().bucket();
 
+// Painting metadata interface
 interface PaintingMetadata {
   title: string;
   price: number;
+  currency?: string;
   width: number;
   height: number;
   medium: string;
   year: number;
   description: string;
-  available: boolean;
+  tags?: string[];
+  available?: boolean;
 }
 
 interface PaintingDocument extends PaintingMetadata {
   id: string;
   imageUrl: string;
   thumbnailUrl: string;
-  createdAt: admin.firestore.Timestamp;
-  updatedAt: admin.firestore.Timestamp;
-  status: 'available' | 'reserved' | 'sold';
-  reservedUntil?: admin.firestore.Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const PAINTINGS_DATA_DIR = path.join(__dirname, 'paintings-data');
-const IMAGES_DIR = path.join(PAINTINGS_DATA_DIR, 'images');
-const METADATA_DIR = path.join(PAINTINGS_DATA_DIR, 'metadata');
+const IMAGES_DIR = './paintings-data/images';
+const METADATA_DIR = './paintings-data/metadata';
+const THUMBNAIL_WIDTH = 400;
 
-async function generateThumbnail(imageBuffer: Buffer): Promise<Buffer> {
-  return sharp(imageBuffer)
-    .resize(400, 400, {
-      fit: 'inside',
-      withoutEnlargement: true
-    })
+async function generateThumbnail(imagePath: string): Promise<Buffer> {
+  console.log(`  → Generating thumbnail...`);
+  return await sharp(imagePath)
+    .resize(THUMBNAIL_WIDTH, null, { withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toBuffer();
 }
 
-async function uploadImage(
-  filePath: string,
-  destinationPath: string
+async function uploadToStorage(
+  buffer: Buffer,
+  fileName: string,
+  contentType: string
 ): Promise<string> {
-  const fileBuffer = await fs.readFile(filePath);
-  const file = bucket.file(destinationPath);
-  
-  await file.save(fileBuffer, {
+  const file = storage.file(fileName);
+  await file.save(buffer, {
+    contentType,
     metadata: {
-      contentType: 'image/jpeg',
       cacheControl: 'public, max-age=31536000',
     },
   });
-
+  
+  // Make file publicly accessible
   await file.makePublic();
-  return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
+  
+  return `https://storage.googleapis.com/${storage.name}/${fileName}`;
 }
 
-async function processPainting(paintingId: string): Promise<void> {
-  console.log(`\n📸 Processing: ${paintingId}`);
-
-  // Find image file (support jpg, jpeg, png)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
-  let imagePath: string | null = null;
+async function processYamlFile(yamlPath: string): Promise<PaintingMetadata> {
+  const content = await fs.readFile(yamlPath, 'utf-8');
+  const data = yaml.load(content) as PaintingMetadata;
   
-  for (const ext of imageExtensions) {
-    const testPath = path.join(IMAGES_DIR, paintingId + ext);
-    try {
-      await fs.access(testPath);
-      imagePath = testPath;
-      break;
-    } catch {
-      continue;
+  // Validate required fields
+  const required = ['title', 'price', 'width', 'height', 'medium', 'year', 'description'];
+  for (const field of required) {
+    if (!(field in data)) {
+      throw new Error(`Missing required field: ${field} in ${yamlPath}`);
     }
   }
-
-  if (!imagePath) {
-    console.error(`  ❌ Image not found for ${paintingId}`);
-    return;
-  }
-
-  // Read metadata
-  const metadataPath = path.join(METADATA_DIR, `${paintingId}.yaml`);
-  let metadata: PaintingMetadata;
   
+  // Set defaults
+  data.currency = data.currency || 'EUR';
+  data.available = data.available !== false; // Default to true
+  
+  return data;
+}
+
+async function uploadPainting(imageFileName: string): Promise<void> {
+  const baseName = path.parse(imageFileName).name;
+  const imagePath = path.join(IMAGES_DIR, imageFileName);
+  const yamlPath = path.join(METADATA_DIR, `${baseName}.yaml`);
+  
+  console.log(`\n📷 Processing: ${baseName}`);
+  
+  // Check if YAML exists
   try {
-    const metadataContent = await fs.readFile(metadataPath, 'utf8');
-    metadata = yaml.load(metadataContent) as PaintingMetadata;
-  } catch (error) {
-    console.error(`  ❌ Metadata not found: ${metadataPath}`);
+    await fs.access(yamlPath);
+  } catch {
+    console.log(`  ⚠️  No metadata file found (${baseName}.yaml), skipping...`);
     return;
   }
-
-  // Validate metadata
-  if (!metadata.title || !metadata.price) {
-    console.error(`  ❌ Invalid metadata: title and price are required`);
-    return;
-  }
-
-  // Check if painting already exists
-  const existingDoc = await db.collection('paintings').doc(paintingId).get();
-  if (existingDoc.exists) {
-    console.log(`  ⚠️  Painting ${paintingId} already exists. Skipping...`);
-    return;
-  }
-
-  // Upload full image
-  const imageUrl = await uploadImage(
-    imagePath,
-    `paintings/${paintingId}${path.extname(imagePath)}`
-  );
-  console.log(`  ✅ Uploaded image`);
-
-  // Generate and upload thumbnail
-  const imageBuffer = await fs.readFile(imagePath);
-  const thumbnailBuffer = await generateThumbnail(imageBuffer);
-  const thumbnailPath = `/tmp/${paintingId}-thumb.jpg`;
-  await fs.writeFile(thumbnailPath, thumbnailBuffer);
   
-  const thumbnailUrl = await uploadImage(
-    thumbnailPath,
-    `paintings/thumbnails/${paintingId}.jpg`
+  // Parse metadata
+  console.log(`  → Reading metadata...`);
+  const metadata = await processYamlFile(yamlPath);
+  
+  // Check if already exists in Firestore
+  const existingDoc = await db.collection('paintings').doc(baseName).get();
+  if (existingDoc.exists) {
+    console.log(`  ℹ️  Already exists in database, skipping upload...`);
+    console.log(`     Use --force to overwrite existing paintings`);
+    return;
+  }
+  
+  // Read image file
+  console.log(`  → Reading image file...`);
+  const imageBuffer = await fs.readFile(imagePath);
+  
+  // Generate thumbnail
+  const thumbnailBuffer = await generateThumbnail(imagePath);
+  
+  // Upload full image
+  console.log(`  → Uploading full image...`);
+  const imageUrl = await uploadToStorage(
+    imageBuffer,
+    `paintings/${baseName}${path.extname(imageFileName)}`,
+    'image/jpeg'
   );
-  console.log(`  ✅ Generated thumbnail`);
-
-  // Create Firestore document
+  
+  // Upload thumbnail
+  console.log(`  → Uploading thumbnail...`);
+  const thumbnailUrl = await uploadToStorage(
+    thumbnailBuffer,
+    `paintings/thumbs/${baseName}_thumb.jpg`,
+    'image/jpeg'
+  );
+  
+  // Save to Firestore
+  console.log(`  → Saving to Firestore...`);
   const paintingDoc: PaintingDocument = {
-    id: paintingId,
+    id: baseName,
     ...metadata,
     imageUrl,
     thumbnailUrl,
-    status: metadata.available ? 'available' : 'sold',
-    createdAt: admin.firestore.Timestamp.now(),
-    updatedAt: admin.firestore.Timestamp.now(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
-
-  await db.collection('paintings').doc(paintingId).set(paintingDoc);
-  console.log(`  ✅ Added to Firestore`);
-  console.log(`  📦 ${metadata.title} - €${metadata.price}`);
+  
+  await db.collection('paintings').doc(baseName).set(paintingDoc);
+  
+  console.log(`  ✅ Successfully uploaded: ${metadata.title}`);
 }
 
 async function main() {
-  console.log('🎨 Bimbi - Paintings Upload Script\n');
-
-  // Get all YAML files from metadata directory
-  const metadataFiles = await fs.readdir(METADATA_DIR);
-  const yamlFiles = metadataFiles.filter(f => 
-    f.endsWith('.yaml') && !f.startsWith('_')
+  console.log('🎨 Bimbi Paintings Uploader\n');
+  
+  // Get all image files
+  const files = await fs.readdir(IMAGES_DIR);
+  const imageFiles = files.filter(file => 
+    /\.(jpg|jpeg|png|webp)$/i.test(file) && !file.startsWith('.')
   );
-
-  if (yamlFiles.length === 0) {
-    console.log('⚠️  No painting metadata files found in paintings-data/metadata/');
-    console.log('Create YAML files like: painting-001.yaml, painting-002.yaml');
-    return;
+  
+  if (imageFiles.length === 0) {
+    console.log('❌ No image files found in paintings-data/images/');
+    process.exit(1);
   }
-
-  console.log(`Found ${yamlFiles.length} painting(s) to process\n`);
-
-  for (const yamlFile of yamlFiles) {
-    const paintingId = path.basename(yamlFile, '.yaml');
-    await processPainting(paintingId);
+  
+  console.log(`Found ${imageFiles.length} image(s) to process\n`);
+  
+  let successCount = 0;
+  let skipCount = 0;
+  let errorCount = 0;
+  
+  for (const imageFile of imageFiles) {
+    try {
+      await uploadPainting(imageFile);
+      successCount++;
+    } catch (error) {
+      errorCount++;
+      console.error(`  ❌ Error processing ${imageFile}:`, error);
+    }
   }
-
-  console.log('\n✨ Done!');
-  process.exit(0);
+  
+  console.log(`\n${'='.repeat(50)}`);
+  console.log(`✅ Uploaded: ${successCount}`);
+  console.log(`⏭️  Skipped: ${skipCount}`);
+  if (errorCount > 0) {
+    console.log(`❌ Errors: ${errorCount}`);
+  }
+  console.log(`${'='.repeat(50)}\n`);
 }
 
-main().catch((error) => {
-  console.error('❌ Fatal error:', error);
-  process.exit(1);
-});
-
+main().catch(console.error);

@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Paintings collection - read-only for public
+    match /paintings/{paintingId} {
+      // Anyone can read paintings
+      allow read: if true;
+      
+      // Only admin can write (via admin SDK with service account)
+      allow write: if false;
+    }
+    
+    // Future: orders collection for checkout
+    match /orders/{orderId} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
+
