@@ -1,0 +1,28 @@
+# Example painting metadata
+# Copy this template for each new painting
+# Filename should match the image filename (without extension)
+
+title: Sunset Over Lisbon
+price: 450
+currency: EUR
+
+# Dimensions in centimeters
+width: 60
+height: 80
+medium: Oil on canvas
+year: 2024
+
+description: |
+  A vibrant sunset captured from the hills of Alfama.
+  Warm oranges and deep purples blend into the Tagus River.
+  This piece captures the golden hour magic of Lisbon.
+
+# Optional fields
+tags:
+  - landscape
+  - sunset
+  - portugal
+
+# Internal use - leave as true for new paintings
+available: true
+

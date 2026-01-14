@@ -1,0 +1,15 @@
+# Copy this template for each new painting
+# Filename should match the image filename (e.g., painting-001.yaml for painting-001.jpg)
+
+title: Painting Title Here
+price: 450
+width: 60
+height: 80
+medium: oil on canvas
+year: 2024
+description: |
+  Write a beautiful description of the painting here.
+  You can use multiple lines.
+  Keep it engaging and evocative.
+available: true
+
