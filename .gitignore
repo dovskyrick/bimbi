@@ -3,6 +3,10 @@ node_modules/
 .pnp
 .pnp.js
 
+# Admin painting images (uploaded to Firebase, no need in git)
+admin/paintings-data/images/*
+!admin/paintings-data/images/.gitkeep
+
 # Testing
 coverage/
 

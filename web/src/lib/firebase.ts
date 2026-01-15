@@ -3,15 +3,24 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // TODO: Replace with your Firebase config from Firebase Console
-// Go to Project Settings → General → Your apps → Web app
+// Your web app's Firebase configuration
+
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+
+  apiKey: "AIzaSyBnOWHKKOzfCUMs_oddbyoTiIw1uh4HIR8",
+
+  authDomain: "bimbi-749b2.firebaseapp.com",
+
+  projectId: "bimbi-749b2",
+
+  storageBucket: "bimbi-749b2.firebasestorage.app",
+
+  messagingSenderId: "595275515854",
+
+  appId: "1:595275515854:web:3a400131ce830272460d9f"
+
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
