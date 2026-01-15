@@ -78,12 +78,19 @@ function PaintingSection({ painting, index }: { painting: typeof paintings[0]; i
       const rect = element.getBoundingClientRect();
       const windowHeight = window.innerHeight;
 
-      // Calculate visibility (0 to 1)
+      // Calculate visibility (0 to 1) with sharper fade zone
       const elementCenter = rect.top + rect.height / 2;
       const windowCenter = windowHeight / 2;
       const distance = Math.abs(elementCenter - windowCenter);
-      const maxDistance = windowHeight / 2 + rect.height / 2;
-      const visibility = Math.max(0, 1 - distance / maxDistance);
+      
+      // Smaller fade zone - only fade when far from center
+      const fadeZoneStart = windowHeight * 0.3; // Start fading at 30% of window height from center
+      const fadeZoneSize = windowHeight * 0.4;   // Fade over 40% of window height
+      
+      let visibility = 1;
+      if (distance > fadeZoneStart) {
+        visibility = Math.max(0, 1 - (distance - fadeZoneStart) / fadeZoneSize);
+      }
 
       setVisible(visibility);
     };

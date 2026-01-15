@@ -67,7 +67,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
-  transition: opacity 0.6s ease;
+  /* No transition - instant response to scroll */
 }
 
 .painting-content {
