@@ -11,16 +11,76 @@ const serviceAccount = JSON.parse(
   await fs.readFile('./service-account.json', 'utf-8')
 ) as ServiceAccount;
 
-// Get storage bucket from service account
-const storageBucket = `${serviceAccount.project_id}.appspot.com`;
+// Get storage bucket - try to find it or use default
+// You can also set FIREBASE_STORAGE_BUCKET env variable to override
+let storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
 
-initializeApp({
+if (!storageBucket) {
+  // Try firebasestorage.app format first (newer Firebase projects)
+  storageBucket = `${serviceAccount.project_id}.firebasestorage.app`;
+}
+
+// Initialize app (we'll reinitialize if bucket is wrong)
+let app = initializeApp({
   credential: cert(serviceAccount),
   storageBucket,
 });
 
-const db = getFirestore();
-const storage = getStorage().bucket();
+const db = getFirestore(app);
+let storage = getStorage(app).bucket();
+
+// Verify bucket exists and try alternatives if needed
+async function verifyBucket() {
+  try {
+    const [exists] = await storage.exists();
+    if (exists) {
+      console.log(`✅ Storage bucket verified: ${storageBucket}\n`);
+      return;
+    }
+  } catch (error: any) {
+    // Bucket doesn't exist or wrong format, try alternative
+    if (error.message?.includes('not found') || error.message?.includes('404')) {
+      console.log(`⚠️  Bucket "${storageBucket}" not found, trying alternative format...\n`);
+      
+      // Try appspot.com format (older Firebase projects)
+      const altBucket = `${serviceAccount.project_id}.appspot.com`;
+      console.log(`🔧 Trying: ${altBucket}\n`);
+      
+      try {
+        const altStorage = getStorage(app).bucket(altBucket);
+        const [altExists] = await altStorage.exists();
+        
+        if (altExists) {
+          console.log(`✅ Found bucket: ${altBucket}\n`);
+          storageBucket = altBucket;
+          storage = altStorage;
+          return;
+        }
+      } catch (altError) {
+        // Both failed, show error
+      }
+    }
+  }
+  
+  // If we get here, bucket doesn't exist
+  console.error(`\n❌ ERROR: Storage bucket not found!\n`);
+  console.error('📋 To find your correct bucket name:');
+  console.error('   1. Go to Firebase Console → Storage');
+  console.error('   2. Look at the URL or bucket name shown at the top');
+  console.error('   3. Common formats:');
+  console.error(`      - ${serviceAccount.project_id}.firebasestorage.app (newer projects)`);
+  console.error(`      - ${serviceAccount.project_id}.appspot.com (older projects)`);
+  console.error('   4. Set it as environment variable:');
+  console.error(`      export FIREBASE_STORAGE_BUCKET="your-actual-bucket-name"`);
+  console.error('   5. Then run: npm run upload\n');
+  console.error('📋 If Storage is not enabled:');
+  console.error('   1. Go to Firebase Console → Storage');
+  console.error('   2. Click "Get started"');
+  console.error('   3. Choose "Production mode"');
+  console.error('   4. Select region (europe-west1 recommended)');
+  console.error('   5. Click "Done"\n');
+  process.exit(1);
+}
 
 // Painting metadata interface
 interface PaintingMetadata {
@@ -198,6 +258,9 @@ async function uploadPainting(imageFileName: string): Promise<void> {
 
 async function main() {
   console.log('🎨 Bimbi Paintings Uploader\n');
+  
+  // Verify storage bucket exists before proceeding
+  await verifyBucket();
   
   // Ensure uploaded directories exist
   await fs.mkdir(UPLOADED_IMAGES_DIR, { recursive: true });

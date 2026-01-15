@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Painting } from '../types/painting';
+import type { Painting } from '../types/painting';
 
 export function usePaintings() {
   const [paintings, setPaintings] = useState<Painting[]>([]);
@@ -12,12 +12,26 @@ export function usePaintings() {
     async function fetchPaintings() {
       try {
         setLoading(true);
-        const q = query(
+        // Try with orderBy first, fallback to no ordering if index missing
+        let q = query(
           collection(db, 'paintings'),
           orderBy('createdAt', 'desc')
         );
         
-        const snapshot = await getDocs(q);
+        let snapshot;
+        try {
+          snapshot = await getDocs(q);
+        } catch (orderError: any) {
+          // If index missing, fetch without ordering
+          if (orderError.code === 'failed-precondition') {
+            console.warn('Firestore index missing, fetching without order');
+            q = query(collection(db, 'paintings'));
+            snapshot = await getDocs(q);
+          } else {
+            throw orderError;
+          }
+        }
+        
         const paintingsData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -28,11 +42,18 @@ export function usePaintings() {
           } as Painting;
         });
         
+        // Sort manually if we couldn't use orderBy
+        paintingsData.sort((a, b) => {
+          const aTime = a.createdAt.getTime();
+          const bTime = b.createdAt.getTime();
+          return bTime - aTime; // Descending
+        });
+        
         setPaintings(paintingsData);
         setError(null);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching paintings:', err);
-        setError('Failed to load paintings');
+        setError(err.message || 'Failed to load paintings');
       } finally {
         setLoading(false);
       }

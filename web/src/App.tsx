@@ -1,41 +1,10 @@
 import { useState, useEffect } from 'react';
+import { usePaintings } from './hooks/usePaintings';
+import type { Painting } from './types/painting';
 import './App.css';
 
-// Hardcoded painting data for testing
-const paintings = [
-  {
-    id: 'A',
-    title: 'Whispers of Dawn',
-    image: '/A.jpg',
-    price: 450,
-    medium: 'Oil on canvas',
-    dimensions: '60 × 80 cm',
-    year: 2024,
-    description: 'A serene exploration of light breaking through morning mist. Soft brushstrokes capture the ephemeral moment when night surrenders to day.',
-  },
-  {
-    id: 'B',
-    title: 'Urban Echoes',
-    image: '/B.jpg',
-    price: 520,
-    medium: 'Oil on canvas',
-    dimensions: '70 × 90 cm',
-    year: 2024,
-    description: 'The rhythm of city life translated into bold strokes and vibrant colors. A celebration of movement and energy in urban spaces.',
-  },
-  {
-    id: 'C',
-    title: 'Coastal Reverie',
-    image: '/C.jpg',
-    price: 380,
-    medium: 'Oil on canvas',
-    dimensions: '50 × 70 cm',
-    year: 2024,
-    description: 'Where land meets sea, this piece captures the eternal dance of waves against ancient shores. A meditation on nature\'s timeless beauty.',
-  },
-];
-
 function App() {
+  const { paintings, loading, error } = usePaintings();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -47,6 +16,57 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="app">
+        <nav className="navbar">
+          <h1 className="logo">Bimbi Gallery</h1>
+          <p className="subtitle">Original Oil Paintings</p>
+        </nav>
+        <main className="gallery">
+          <div className="loading-state">
+            <p>Loading gallery...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="app">
+        <nav className="navbar">
+          <h1 className="logo">Bimbi Gallery</h1>
+          <p className="subtitle">Original Oil Paintings</p>
+        </nav>
+        <main className="gallery">
+          <div className="error-state">
+            <p>Error loading paintings: {error}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Filter to show only available paintings (or all if you want to show sold too)
+  const displayPaintings = paintings.filter(p => p.available);
+
+  if (displayPaintings.length === 0) {
+    return (
+      <div className="app">
+        <nav className="navbar">
+          <h1 className="logo">Bimbi Gallery</h1>
+          <p className="subtitle">Original Oil Paintings</p>
+        </nav>
+        <main className="gallery">
+          <div className="empty-state">
+            <p>No paintings available yet.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <nav className={`navbar ${scrolled ? 'hidden' : ''}`}>
@@ -55,7 +75,7 @@ function App() {
       </nav>
 
       <main className="gallery">
-        {paintings.map((painting, index) => (
+        {displayPaintings.map((painting, index) => (
           <PaintingSection key={painting.id} painting={painting} index={index} />
         ))}
       </main>
@@ -67,7 +87,7 @@ function App() {
   );
 }
 
-function PaintingSection({ painting, index }: { painting: typeof paintings[0]; index: number }) {
+function PaintingSection({ painting, index }: { painting: Painting; index: number }) {
   const [visible, setVisible] = useState(0);
 
   useEffect(() => {
@@ -110,7 +130,7 @@ function PaintingSection({ painting, index }: { painting: typeof paintings[0]; i
     >
       <div className={`painting-content ${isLeft ? 'left' : 'right'}`}>
         <div className="painting-image">
-          <img src={painting.image} alt={painting.title} />
+          <img src={painting.imageUrl} alt={painting.title} loading="lazy" />
         </div>
 
         <div className="painting-info">
@@ -119,7 +139,7 @@ function PaintingSection({ painting, index }: { painting: typeof paintings[0]; i
 
           <div className="painting-details">
             <p><strong>Medium:</strong> {painting.medium}</p>
-            <p><strong>Dimensions:</strong> {painting.dimensions}</p>
+            <p><strong>Dimensions:</strong> {painting.width} × {painting.height} cm</p>
             <p><strong>Year:</strong> {painting.year}</p>
           </div>
 
