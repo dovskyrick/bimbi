@@ -3,19 +3,16 @@
 ## Adding a New Painting
 
 1. Add image to `/admin/paintings-data/images/painting-004.jpg`
-2. Create `/admin/paintings-data/metadata/painting-004.yaml`:
 
+2. **(Optional)** Create `/admin/paintings-data/metadata/painting-004.yaml`:
 ```yaml
 title: Your Painting Title
 price: 500
-width: 70
-height: 90
 medium: oil on canvas
 year: 2024
 description: |
   Beautiful description here.
-  Multiple lines supported.
-available: true
+# All fields optional! Defaults used if missing
 ```
 
 3. Run upload:
@@ -24,7 +21,11 @@ cd admin
 npm run upload
 ```
 
-4. Refresh your website - new painting appears! ✨
+4. Files automatically moved to `uploaded/` folder for backup
+
+5. Refresh your website - new painting appears! ✨
+
+**Quick tip:** No YAML needed! Just drop image and run upload → uses defaults
 
 ---
 
@@ -51,8 +52,9 @@ npm run build        # Build for production
 
 | What | Where |
 |------|-------|
-| Add images | `/admin/paintings-data/images/` |
-| Add metadata | `/admin/paintings-data/metadata/` |
+| Add new images | `/admin/paintings-data/images/` |
+| Add new metadata (optional) | `/admin/paintings-data/metadata/` |
+| Uploaded backups | `/admin/paintings-data/uploaded/` |
 | Firebase service account | `/admin/service-account.json` |
 | Firebase web config | `/web/src/lib/firebase.ts` |
 | Firestore rules | `/firestore.rules` |

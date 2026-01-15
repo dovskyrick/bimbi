@@ -46,6 +46,8 @@ interface PaintingDocument extends PaintingMetadata {
 
 const IMAGES_DIR = './paintings-data/images';
 const METADATA_DIR = './paintings-data/metadata';
+const UPLOADED_IMAGES_DIR = './paintings-data/uploaded/images';
+const UPLOADED_METADATA_DIR = './paintings-data/uploaded/metadata';
 const THUMBNAIL_WIDTH = 400;
 
 async function generateThumbnail(imagePath: string): Promise<Buffer> {
@@ -76,22 +78,31 @@ async function uploadToStorage(
 }
 
 async function processYamlFile(yamlPath: string): Promise<PaintingMetadata> {
-  const content = await fs.readFile(yamlPath, 'utf-8');
-  const data = yaml.load(content) as PaintingMetadata;
+  let data: Partial<PaintingMetadata> = {};
   
-  // Validate required fields
-  const required = ['title', 'price', 'width', 'height', 'medium', 'year', 'description'];
-  for (const field of required) {
-    if (!(field in data)) {
-      throw new Error(`Missing required field: ${field} in ${yamlPath}`);
-    }
+  // Try to read YAML file, but don't fail if it doesn't exist
+  try {
+    const content = await fs.readFile(yamlPath, 'utf-8');
+    data = yaml.load(content) as Partial<PaintingMetadata>;
+  } catch (error) {
+    // YAML file doesn't exist or is invalid - will use defaults
   }
   
-  // Set defaults
-  data.currency = data.currency || 'EUR';
-  data.available = data.available !== false; // Default to true
+  // Set defaults for missing fields
+  const currentYear = new Date().getFullYear();
   
-  return data;
+  return {
+    title: data.title || 'Untitled',
+    price: data.price || 100,
+    currency: data.currency || 'EUR',
+    width: data.width || 0, // Will be set from image if 0
+    height: data.height || 0, // Will be set from image if 0
+    medium: data.medium || 'Unknown',
+    year: data.year || currentYear,
+    description: data.description || 'No description available',
+    tags: data.tags || [],
+    available: data.available !== false, // Default to true
+  };
 }
 
 async function uploadPainting(imageFileName: string): Promise<void> {
@@ -102,15 +113,16 @@ async function uploadPainting(imageFileName: string): Promise<void> {
   console.log(`\n📷 Processing: ${baseName}`);
   
   // Check if YAML exists
+  let hasYaml = true;
   try {
     await fs.access(yamlPath);
+    console.log(`  → Reading metadata...`);
   } catch {
-    console.log(`  ⚠️  No metadata file found (${baseName}.yaml), skipping...`);
-    return;
+    console.log(`  ⚠️  No metadata file found, using defaults...`);
+    hasYaml = false;
   }
   
-  // Parse metadata
-  console.log(`  → Reading metadata...`);
+  // Parse metadata (will use defaults if YAML doesn't exist)
   const metadata = await processYamlFile(yamlPath);
   
   // Check if already exists in Firestore
@@ -124,6 +136,17 @@ async function uploadPainting(imageFileName: string): Promise<void> {
   // Read image file
   console.log(`  → Reading image file...`);
   const imageBuffer = await fs.readFile(imagePath);
+  
+  // Get image dimensions if not provided in metadata
+  if (metadata.width === 0 || metadata.height === 0) {
+    const imageMetadata = await sharp(imagePath).metadata();
+    // Convert pixels to rough cm estimate (assume 72 DPI)
+    const dpi = 72;
+    const cmPerInch = 2.54;
+    metadata.width = Math.round((imageMetadata.width || 0) / dpi * cmPerInch);
+    metadata.height = Math.round((imageMetadata.height || 0) / dpi * cmPerInch);
+    console.log(`  → Detected dimensions: ${metadata.width} × ${metadata.height} cm`);
+  }
   
   // Generate thumbnail
   const thumbnailBuffer = await generateThumbnail(imagePath);
@@ -158,10 +181,27 @@ async function uploadPainting(imageFileName: string): Promise<void> {
   await db.collection('paintings').doc(baseName).set(paintingDoc);
   
   console.log(`  ✅ Successfully uploaded: ${metadata.title}`);
+  
+  // Move files to uploaded folder for backup
+  console.log(`  → Moving files to uploaded folder...`);
+  const uploadedImagePath = path.join(UPLOADED_IMAGES_DIR, imageFileName);
+  await fs.rename(imagePath, uploadedImagePath);
+  
+  // Move YAML only if it exists
+  if (hasYaml) {
+    const uploadedYamlPath = path.join(UPLOADED_METADATA_DIR, `${baseName}.yaml`);
+    await fs.rename(yamlPath, uploadedYamlPath);
+  }
+  
+  console.log(`  📦 Backed up to uploaded folder`);
 }
 
 async function main() {
   console.log('🎨 Bimbi Paintings Uploader\n');
+  
+  // Ensure uploaded directories exist
+  await fs.mkdir(UPLOADED_IMAGES_DIR, { recursive: true });
+  await fs.mkdir(UPLOADED_METADATA_DIR, { recursive: true });
   
   // Get all image files
   const files = await fs.readdir(IMAGES_DIR);

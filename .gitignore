@@ -7,6 +7,11 @@ node_modules/
 admin/paintings-data/images/*
 !admin/paintings-data/images/.gitkeep
 
+# Uploaded paintings backup (already in Firebase)
+admin/paintings-data/uploaded/*
+!admin/paintings-data/uploaded/images/.gitkeep
+!admin/paintings-data/uploaded/metadata/.gitkeep
+
 # Testing
 coverage/
 

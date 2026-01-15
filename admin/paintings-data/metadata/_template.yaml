@@ -1,15 +1,22 @@
-# Copy this template for each new painting
+# Template for painting metadata
 # Filename should match the image filename (e.g., painting-001.yaml for painting-001.jpg)
 
-title: Painting Title Here
+# ALL FIELDS ARE OPTIONAL! Defaults will be used if missing:
+# - title: "Untitled"
+# - description: "No description available"
+# - price: 100
+# - medium: "Unknown"
+# - width/height: Auto-detected from image (rough estimate)
+# - year: Current year
+# - available: true
+
+title: Your Painting Title
 price: 450
 width: 60
 height: 80
 medium: oil on canvas
 year: 2024
 description: |
-  Write a beautiful description of the painting here.
-  You can use multiple lines.
-  Keep it engaging and evocative.
+  Write a beautiful description here.
+  Multiple lines supported.
 available: true
-
