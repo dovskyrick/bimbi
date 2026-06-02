@@ -89,7 +89,6 @@ function App() {
 
 function PaintingSection({ painting, index }: { painting: Painting; index: number }) {
   const [visible, setVisible] = useState(0);
-
   useEffect(() => {
     const handleScroll = () => {
       const element = document.getElementById(`painting-${painting.id}`);
