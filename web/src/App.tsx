@@ -20,7 +20,7 @@ function App() {
     return (
       <div className="app">
         <nav className="navbar">
-          <h1 className="logo">Bimbi Gallery</h1>
+          <h1 className="logo">Ricardo Santos</h1>
           <p className="subtitle">Original Oil Paintings</p>
         </nav>
         <main className="gallery">
@@ -36,7 +36,7 @@ function App() {
     return (
       <div className="app">
         <nav className="navbar">
-          <h1 className="logo">Bimbi Gallery</h1>
+          <h1 className="logo">Ricardo Santos</h1>
           <p className="subtitle">Original Oil Paintings</p>
         </nav>
         <main className="gallery">
@@ -55,7 +55,7 @@ function App() {
     return (
       <div className="app">
         <nav className="navbar">
-          <h1 className="logo">Bimbi Gallery</h1>
+          <h1 className="logo">Ricardo Santos</h1>
           <p className="subtitle">Original Oil Paintings</p>
         </nav>
         <main className="gallery">
@@ -70,7 +70,7 @@ function App() {
   return (
     <div className="app">
       <nav className={`navbar ${scrolled ? 'hidden' : ''}`}>
-        <h1 className="logo">Bimbi Gallery</h1>
+        <h1 className="logo">Ricardo Santos</h1>
         <p className="subtitle">Original Oil Paintings</p>
       </nav>
 
@@ -81,7 +81,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>© 2024 Bimbi Gallery • Lisbon, Portugal</p>
+        <p>© {new Date().getFullYear()} Ricardo Santos • Lisbon, Portugal</p>
       </footer>
     </div>
   );
