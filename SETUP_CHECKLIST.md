@@ -113,3 +113,4 @@ Congratulations! 🎉 You now have a working art gallery website!
 
 **Next:** When ready, we'll add Phase 2 (Shopping Cart) 🛒
 
+

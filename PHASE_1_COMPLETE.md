@@ -209,3 +209,4 @@ Once you complete the setup steps, you'll have a fully functional art gallery we
 
 **Ready for Phase 2?** Just say the word and I'll add the shopping cart! 🛒
 
+
