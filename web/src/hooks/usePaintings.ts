@@ -79,7 +79,7 @@ export function usePainting(id: string | undefined) {
     async function fetchPainting() {
       try {
         setLoading(true);
-        const docRef = doc(db, 'paintings', id);
+        const docRef = doc(db, 'paintings', id!);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
