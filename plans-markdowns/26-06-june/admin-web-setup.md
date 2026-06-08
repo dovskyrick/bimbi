@@ -1,14 +1,60 @@
 # Admin Web — Setup Instructions
 
-## 1. Fill in your email in two places
+## How access control works
 
-In `/home/rbbs/Dev/bimbi/admin-web/.env.local` — replace `your@email.com` with your actual Google account email.
-
-In both `/home/rbbs/Dev/bimbi/firestore.rules` and `/home/rbbs/Dev/bimbi/storage.rules` — replace `ADMIN_EMAIL_HERE` with that same email.
+Security is enforced by Firebase Security Rules using your **Firebase UID** — an opaque identifier
+that Firebase assigns to your Google account. No email is stored anywhere in the codebase.
+The UID is safe to commit (it is meaningless without a valid signed Firebase token).
 
 ---
 
-## 2. Deploy the security rules to Firebase
+## Step 1 — Enable Google sign-in in Firebase Console
+
+Go to [Firebase Console](https://console.firebase.google.com) → your project →
+**Authentication → Sign-in method** → enable **Google**.
+
+---
+
+## Step 2 — Add localhost to authorised domains
+
+Same console → **Authentication → Settings → Authorized domains** → confirm `localhost` is listed.
+(It is usually there by default — just check.)
+
+---
+
+## Step 3 — Install and run the app for the first time
+
+```bash
+cd /home/rbbs/Dev/bimbi/admin-web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5174` and sign in with your Google account.
+
+---
+
+## Step 4 — Get your UID
+
+Go to [Firebase Console](https://console.firebase.google.com) → your project →
+**Authentication → Users**.
+
+You will see your account listed after the first sign-in. Copy the value in the **User UID** column.
+It looks something like `7fKx9mQpL2AbCdEf...`.
+
+---
+
+## Step 5 — Fill in your UID in the rules files
+
+In `/home/rbbs/Dev/bimbi/firestore.rules` — replace `YOUR_UID_HERE` with your UID.
+
+In `/home/rbbs/Dev/bimbi/storage.rules` — replace `YOUR_UID_HERE` with the same UID.
+
+Both files are fully committable — a UID contains no personal information.
+
+---
+
+## Step 6 — Deploy the security rules
 
 ```bash
 cd /home/rbbs/Dev/bimbi
@@ -17,26 +63,7 @@ firebase deploy --only firestore:rules,storage
 
 ---
 
-## 3. Add localhost:5174 to Firebase Auth authorized domains
+## Step 7 — You're done
 
-Go to [Firebase Console](https://console.firebase.google.com) → your project → **Authentication** → **Settings** → **Authorized domains** → Add `localhost`.
-
-(It may already be there — just check.)
-
----
-
-## 4. Enable Google sign-in provider
-
-Same console → **Authentication** → **Sign-in method** → Enable **Google**.
-
----
-
-## 5. Install and run
-
-```bash
-cd /home/rbbs/Dev/bimbi/admin-web
-npm install
-npm run dev
-```
-
-Then open `http://localhost:5174`. You'll see the login screen, sign in with Google, and land on the editable gallery.
+Reload `http://localhost:5174`, sign in, and the editable gallery is live.
+Any write attempt from a different Google account will be rejected by Firebase directly.
