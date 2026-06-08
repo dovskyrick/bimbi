@@ -133,11 +133,21 @@
   letter-spacing: 0.05em;
 }
 
-.contact-note {
+.inquire-btn {
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  padding: 0.875rem 2.5rem;
   font-size: 0.875rem;
-  color: #666;
-  font-style: italic;
-  margin: 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.inquire-btn:hover {
+  opacity: 0.75;
 }
 
 @media (max-width: 968px) {

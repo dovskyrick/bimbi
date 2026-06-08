@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { usePainting } from '../hooks/usePaintings';
+import { InquireModal } from '../components/InquireModal';
 import './PaintingDetail.css';
 
 export function PaintingDetail() {
   const { id } = useParams<{ id: string }>();
   const { painting, loading, error } = usePainting(id);
+  const [modalOpen, setModalOpen] = useState(false);
 
   if (loading) {
     return (
@@ -78,12 +81,17 @@ export function PaintingDetail() {
 
           {painting.available && (
             <div className="detail-section">
-              <p className="contact-note">
-                Interested in this piece? Contact us to purchase.
-              </p>
-              {/* Cart button will be added in Phase 2 */}
+              <button className="inquire-btn" onClick={() => setModalOpen(true)}>
+                Inquire
+              </button>
             </div>
           )}
+
+          <InquireModal
+            paintingTitle={painting.title}
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+          />
         </div>
       </div>
     </div>
