@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePaintings } from './hooks/usePaintings';
+import { InquireModal } from './components/InquireModal';
 import type { Painting } from './types/painting';
 import './App.css';
 
@@ -89,6 +90,7 @@ function App() {
 
 function PaintingSection({ painting, index }: { painting: Painting; index: number }) {
   const [visible, setVisible] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
   useEffect(() => {
     const handleScroll = () => {
       const element = document.getElementById(`painting-${painting.id}`);
@@ -122,6 +124,12 @@ function PaintingSection({ painting, index }: { painting: Painting; index: numbe
   const isLeft = index % 2 === 0;
 
   return (
+    <>
+    <InquireModal
+      paintingTitle={painting.title}
+      isOpen={modalOpen}
+      onClose={() => setModalOpen(false)}
+    />
     <section
       id={`painting-${painting.id}`}
       className="painting-section"
@@ -144,10 +152,11 @@ function PaintingSection({ painting, index }: { painting: Painting; index: numbe
 
           <p className="painting-description">{painting.description}</p>
 
-          <button className="contact-btn">Inquire</button>
+          <button className="contact-btn" onClick={() => setModalOpen(true)}>Inquire</button>
         </div>
       </div>
     </section>
+    </>
   );
 }
 
