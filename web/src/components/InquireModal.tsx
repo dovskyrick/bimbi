@@ -26,7 +26,9 @@ export function InquireModal({ paintingTitle, isOpen, onClose }: Props) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      setTimeout(() => firstFieldRef.current?.focus(), 50);
+      if (window.innerWidth >= 768) {
+        setTimeout(() => firstFieldRef.current?.focus(), 50);
+      }
     } else {
       document.body.style.overflow = '';
     }
