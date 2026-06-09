@@ -89,7 +89,7 @@ function App() {
 }
 
 function PaintingSection({ painting, index }: { painting: Painting; index: number }) {
-  const [visible, setVisible] = useState(0);
+  const [visible, setVisible] = useState(index === 0 ? 1 : 0);
   const [modalOpen, setModalOpen] = useState(false);
   useEffect(() => {
     const handleScroll = () => {
@@ -98,16 +98,21 @@ function PaintingSection({ painting, index }: { painting: Painting; index: numbe
 
       const rect = element.getBoundingClientRect();
       const windowHeight = window.innerHeight;
+      const isMobile = window.innerWidth < 768;
 
-      // Calculate visibility (0 to 1) with sharper fade zone
       const elementCenter = rect.top + rect.height / 2;
       const windowCenter = windowHeight / 2;
       const distance = Math.abs(elementCenter - windowCenter);
-      
-      // Smaller fade zone - only fade when far from center
-      const fadeZoneStart = windowHeight * 0.3; // Start fading at 30% of window height from center
-      const fadeZoneSize = windowHeight * 0.4;   // Fade over 40% of window height
-      
+      const isBelow = elementCenter > windowCenter;
+
+      // On mobile: very generous fade zone — content stays visible much longer.
+      // Below center (approaching): only start fading when very far away.
+      // Above center (scrolled past): start fading a bit sooner.
+      const fadeZoneStart = isMobile
+        ? (isBelow ? windowHeight * 0.65 : windowHeight * 0.4)
+        : windowHeight * 0.3;
+      const fadeZoneSize = isMobile ? windowHeight * 0.3 : windowHeight * 0.4;
+
       let visibility = 1;
       if (distance > fadeZoneStart) {
         visibility = Math.max(0, 1 - (distance - fadeZoneStart) / fadeZoneSize);
