@@ -15,12 +15,12 @@ type Status = 'idle' | 'submitting' | 'success' | 'error';
 export function InquireModal({ paintingTitle, isOpen, onClose }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState(`I'm interested in "${paintingTitle}".`);
+  const [message, setMessage] = useState(`Hello, I'm interested in "${paintingTitle}".`);
   const [status, setStatus] = useState<Status>('idle');
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setMessage(`I'm interested in "${paintingTitle}".`);
+    setMessage(`Hello, I'm interested in "${paintingTitle}".`);
   }, [paintingTitle]);
 
   useEffect(() => {
